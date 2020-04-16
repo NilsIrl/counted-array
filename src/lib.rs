@@ -29,7 +29,7 @@ macro_rules! counted_array {
     (@parse $size:expr, ($val:expr, $($vals:expr),*) -> [$($accs:expr),*] $thru:tt) => {
         counted_array!(@parse $size + 1usize, ($($vals),*) -> [$($accs,)* $val] $thru);
     };
-    
+
     // output a local variable
     (@output $size:expr, $acc:tt (() let $n:ident $t:ty)) => {
         let $n: [$t; $size] = $acc;
@@ -39,12 +39,15 @@ macro_rules! counted_array {
         lazy_static!{ $($p)* static ref $n: [$t; $size] = $acc; }
     };
     // output a static or const item
-    (@output $size:expr, $acc:tt (($($p:tt)*) $s:ident $n:ident $t:ty)) => {
-        $($p)* $s $n: [$t; $size] = $acc;
+    (@output $size:expr, $acc:tt (($($p:tt)*) $storage:ident $name:ident $t:ty)) => {
+        $($p)* $storage $n: [$t; $size] = $acc;
     };
-    
+    (@output $size:expr, $acc:tt (($($p:tt)*) $storage:ident $name:ident $container:tt<$type:ty>)) => {
+        $($p)* $storage $n: $container<$type, $size> = $acc;
+    };
+
     // EXTERNAL
-    
+
     // entry point
     (pub $storage:ident $n:ident: [$t:ty; _] = [$($vals:expr),* $(,)*]) => {
         counted_array!(@parse 0usize, ($($vals),*) -> [] ((pub) $storage $n $t));
@@ -52,8 +55,10 @@ macro_rules! counted_array {
     (pub $restr:tt $storage:ident $n:ident: [$t:ty; _] = [$($vals:expr),* $(,)*]) => {
         counted_array!(@parse 0usize, ($($vals),*) -> [] ((pub $restr) $storage $n $t));
     };
-    ($storage:ident $n:ident: [$t:ty; _] = [$($vals:expr),* $(,)*]) => {
-        counted_array!(@parse 0usize, ($($vals),*) -> [] (() $storage $n $t));
+    ($storage:ident $name:ident: [$type:ty; _] = [$($vals:expr),* $(,)*]) => {
+        counted_array!(@parse 0usize, ($($vals),*) -> [] (() $storage $name $type));
+    };
+    ($storage:ident $name:ident: $container:ident<$type:ty, _> = [$($vals:expr),* $(,)*]) => {
+        Counted_array!(@parse 0usize, ($($vals),*)) -> [] (() $storage $name $container<$t>)
     };
 }
-
